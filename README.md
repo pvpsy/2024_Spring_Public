@@ -14,6 +14,6 @@ Submitting the assignments will require the use of Git and Github. There is a de
 - Work on each assignment in the .Rmd files in the “assignment/” folder on your computer.
 - Stage and commit your changes. (Pro tip: Do this frequently.)
 - Push the changes to your forked project. (Also do this frequently, e.g. after each assignment.)
-- If you are done, create a pull request, and assign Tamas and Marton as reviewers
+- If you are done, create a pull request, and assign Tamas and Jennifer as reviewers
 
 Have Fun!
