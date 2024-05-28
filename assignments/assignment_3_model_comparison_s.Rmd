@@ -54,12 +54,30 @@ In your discussion of the findings, briefly interpret the results of the above a
 
 # Solution
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(rmarkdown)
+library(conflicted)
+library(broom)
+library(car)
+library(readxl)
+library(zoo)
+library(lmtest)
+library(kableExtra)
+library(sjPlot)
+library(knitr)
+library(dplyr)
+```
+
+
 ## Read the data
 
 Read the dataset used in this assignment. Pay attention to the extension of the datafile.
 
 ```{r}
-
+setwd("C:/Rprojects/2024_Spring_Public/data")
+data <- read_excel("assignment_3_dataset_.xlsx")
 ```
 
 ## Data and model diagnostics 
@@ -69,7 +87,8 @@ Read the dataset used in this assignment. Pay attention to the extension of the 
 Run an exploratory data analysis (EDA) to investigate the dataset.
 
 ```{r}
-
+glimpse(data)
+summary(data)
 ```
 
 #### Correct coding errors
@@ -77,8 +96,20 @@ Run an exploratory data analysis (EDA) to investigate the dataset.
 If you find values in the dataset during the EDA, that are not correct based on the provided descriptions of the variables of the dataset please correct them here.
 
 ```{r}
-
+data <- data %>%
+  dplyr::mutate(sex = dplyr::recode(sex, "male" = 1, "female" = 2, "woman" = 2)) %>% 
+  dplyr::filter(pain >= 1 & pain <= 10, mindfulness >= 1 & mindfulness <= 6)
+summary(data)
 ```
+
+```{r}
+missing_values <- sum(is.na(data))
+cat("Total missing values: ", missing_values, "\n")
+na_rows <- data %>%
+  dplyr::filter(if_any(everything(), is.na))
+print(na_rows)
+```
+
 
 ### Model diagnostics
 #### Build the more complex model
@@ -86,15 +117,28 @@ If you find values in the dataset during the EDA, that are not correct based on 
 In order to test the more complex model for outliers and to test the assumptions first build the model.
 
 ```{r}
-
+shapiro.test(data$STAI_trait)
+shapiro.test(data$pain_cat)
+hist(data$pain_cat, main = "Histogram of Variable", xlab = "Variable", ylab = "Frequency")
+shapiro.test(data$mindfulness)
+shapiro.test(data$cortisol_serum)
+shapiro.test(data$cortisol_saliva)
 ```
+
+```{r}
+complex_model <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum + cortisol_saliva, data = data)
+summary(complex_model)
+```
+
 
 #### Checking for influential outliers
 
 Check for outlier values in the model.
 
 ```{r}
-
+cook <- cooks.distance(complex_model)
+influential <- as.numeric(names(cook)[(cook > 4/length(cook))])
+data[influential, ]
 ```
 
 #### Checking assumptions
@@ -102,19 +146,25 @@ Check for outlier values in the model.
 Check the normality assumption.
 
 ```{r}
+qqnorm(residuals(complex_model))
+qqline(residuals(complex_model))
 
+# Shapiro-Wilk test
+shapiro.test(residuals(complex_model))
 ```
 
 Check the linearity assumption.
 
 ```{r}
-
+# Rainbow test
+raintest(complex_model)
 ```
 
 Check the homoscedasticty assumption (homogeneity of variance).
 
 ```{r}
-
+# Breusch-Pagan test
+bptest(complex_model)
 ```
 
 Check the multicollinearity assumption.
@@ -126,7 +176,7 @@ https://statisticalhorizons.com/multicollinearity
 http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity-in-regression-analysis
 
 ```{r}
-
+vif(complex_model)
 ```
 
 ### Making decision based on model diagnostics
@@ -134,13 +184,16 @@ http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity
 If based on the assumption tests you decide to drop a predictor variable you should do that here. Create your updated model.
 
 ```{r}
-
+updated_model <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness, data = data)
+summary(updated_model)
 ```
 
 #### Checking outliers of the updated model
 
 ```{r}
-
+cook_updated <- cooks.distance(updated_model)
+influential_updated <- as.numeric(names(cook_updated)[(cook_updated > 4/length(cook_updated))])
+data[influential_updated, ]
 ```
 
 #### Checking assumptions of the updated model
@@ -148,25 +201,31 @@ If based on the assumption tests you decide to drop a predictor variable you sho
 Normality assumption
 
 ```{r}
+qqnorm(residuals(updated_model))
+qqline(residuals(updated_model))
 
+# Shapiro-Wilk test
+shapiro.test(residuals(updated_model))
 ```
 
 Linearity assumption
 
 ```{r}
-
+# Rainbow test
+raintest(updated_model)
 ```
 
 Homoscedasticty assumption (homogeneity of variance)
 
 ```{r}
-
+# Breusch-Pagan test
+bptest(updated_model)
 ```
 
 Multicollinearity assumption
 
 ```{r}
-
+vif(updated_model)
 ```
 
 ## Model comparison
@@ -174,18 +233,117 @@ Multicollinearity assumption
 Create the simple model and get the results of the model that needs to be reported based on the What to report section.
 
 ```{r}
-
+simple_model <- lm(pain ~ age + sex, data = data)
+summary(simple_model)
 ```
+
+Normality assumption
+
+```{r}
+qqnorm(residuals(simple_model))
+qqline(residuals(simple_model))
+
+# Shapiro-Wilk test
+shapiro.test(residuals(simple_model))
+```
+
+Linearity assumption
+
+```{r}
+# Rainbow test
+raintest(simple_model)
+```
+
+Homoscedasticty assumption (homogeneity of variance)
+
+```{r}
+# Breusch-Pagan test
+bptest(simple_model)
+```
+
+Multicollinearity assumption
+
+```{r}
+vif(simple_model)
+```
+
 
 Create the more complex model based on the results of the model diagnostics. Also, get the results that needs to be reported based on the What to report section.
 
 ```{r}
-
+summary(updated_model)
 ```
 
 Compare the two models.
 
 ```{r}
-
+anova(simple_model, updated_model)
 ```
+
+```{r}
+adjr2_smodel <- summary(simple_model)$adj.r.squared
+adjr2_umodel <- summary(updated_model)$adj.r.squared
+
+cat("Adjusted R-squared for Simple Model:", adjr2_smodel, "\n")
+cat("Adjusted R-squared for Updated Model:", adjr2_umodel, "\n")
+
+summary(updated_model)$r.squared - summary(simple_model)$r.squared
+```
+
+
+# Report
+
+Descriptive statistics
+
+```{r}
+# Calculate descriptive statistics
+summary_table <- data %>%
+  summarise(
+    Variable = c("Age (years)", "Sex", "Weight (Kg)", "IQ"),
+    N = c(n(), n(), n(), n()),
+    Mean = c(mean(age), mean(sex), mean(weight), mean(IQ)),
+    Median = c(median(age), median(sex), median(weight), median(IQ)),
+    SD = c(sd(age), sd(sex), sd(weight), sd(IQ)),
+    Min = c(min(age), min(sex), min(weight), min(IQ)),
+    Max = c(max(age), max(sex), max(weight), max(IQ))
+  ) %>%
+  select(Variable, N, Mean, Median, SD, Min, Max)
+
+# Print the table
+kable(summary_table, caption = "Descriptive Statistics")
+```
+
+
+Model description
+
+A multiple regression analysis was conducted to examine the predictors of pain. The regression equation of the simple model was the following: pain = 8.568 - 0.084 * age - 0.131 * sex. The simple model was statistically significant, F(2, 155) = 6.78, p = .002, and explained 8 % of the variance in pain scores (R² = .080, Adjusted R² = .069). The residual standard error was 1.458. 
+
+```{r}
+tab_model(simple_model, show.se = TRUE, show.stat = TRUE, show.aic = TRUE)
+```
+
+Furthermore the regression equation of the more complex model was the following: pain = 4.685 − 0.067 * age - 0.221 * sex + 0.027 * STAI_trait + 0.096 * pain_cat − 0.198 * mindfulness. The regression model was statistically significant, F(5, 152) = 10.41, p < .001, and explained 25.6% of the variance in pain scores (R² = .256, Adjusted R² = .231). The residual standard error was 1.325.
+Age (B = -0.067, SE = 0.024, t(152) = -2.85, p = .005) and pain catastrophizing (B = 0.096, SE = 0.030, t(152) = 3.19, p = .002) catastrophizing were significant predictors of pain.
+
+```{r}
+tab_model(updated_model, show.se = TRUE, show.stat = TRUE, show.aic = TRUE)
+```
+
+The complex model explained significantly more (17.5 %) variability than the simple model.
+
+```{r}
+# Create a data frame for the adjusted R-squared values
+adjr2_comparison <- data.frame(
+  Model = c("Simple Model", "Updated Model"),
+  `Adjusted R-squared` = c(adjr2_smodel, adjr2_umodel))
+
+# Print the comparison table using kable
+kable(adjr2_comparison, caption = "Comparison of Adjusted R-squared Values") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+# Discussion
+
+In our study we found that age and pain catastrophizing were significant predictors of pain. Additionally we found that higher pain catastrophizing are associated with higher pain scores.
+The conclusion is that the older a person is the lower the pain experienced which confirms previous findings. 
 
