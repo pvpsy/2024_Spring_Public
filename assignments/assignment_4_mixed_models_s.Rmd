@@ -9,7 +9,24 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(rmarkdown)
+library(conflicted)
+library(lme4)
+library(haven)
+library(dplyr)
+library(performance)
+library(kableExtra)
 ```
+
+```{r}
+install.packages("lme4", type = "source")
+```
+
+
+```{r}
+install.packages("Matrix", type = "source")
+```
+
 
 # Introduction
 
@@ -58,7 +75,9 @@ Compare the model coefficients and the confidence intervals observed in this ass
 Read the datasets used in this assignment. Pay attention to the extensions of the datafiles.
 
 ```{r}
-
+setwd("C:/Rprojects/2024_Spring_Public/data")
+data_A <- read_sav("assignment_4_dataset_A_.sav")
+data_B <- read_sav("assignment_4_dataset_B_.sav")
 ```
 
 ## Exploratory data analysis
@@ -66,7 +85,11 @@ Read the datasets used in this assignment. Pay attention to the extensions of th
 Run an exploratory data analysis (EDA) to investigate the dataset.
 
 ```{r}
+glimpse(data_A)
+glimpse(data_B)
 
+summary(data_A)
+summary(data_B)
 ```
 
 ## Correct coding errors
@@ -74,6 +97,107 @@ Run an exploratory data analysis (EDA) to investigate the dataset.
 If you find values in the dataset during the EDA, that are not correct based on the provided descriptions of the variables of the dataset please correct them here.
 
 ```{r}
+data_A <- data_A %>%
+  dplyr::mutate(sex = dplyr::recode(sex, "male" = 1, "Male" = 1, "female" = 2))
+summary(data_A)
+```
+
+```{r}
+missing_values <- sum(is.na(data_A))
+cat("Total missing values: ", missing_values, "\n")
+na_rows <- data_A %>%
+  dplyr::filter(if_any(everything(), is.na))
+print(na_rows)
+```
+
+```{r}
+data_B <- data_B %>%
+  dplyr::mutate(sex = dplyr::recode(sex, "male" = 1, "female" = 2))
+summary(data_B)
+```
+
+```{r}
+missing_values <- sum(is.na(data_B))
+cat("Total missing values: ", missing_values, "\n")
+na_rows <- data_B %>%
+  dplyr::filter(if_any(everything(), is.na))
+print(na_rows)
+```
+
+## Linear mixed model on data_A
+
+```{r}
+shapiro.test(data_A$STAI_trait)
+shapiro.test(data_A$pain_cat)
+hist(data_A$pain_cat, main = "Histogram of Pain catastrophizing", xlab = "pain_cat", ylab = "Frequency")
+shapiro.test(data_A$mindfulness)
+hist(data_A$mindfulness, main = "Histogram of Mindfulness", xlab = "mindfulness", ylab = "Frequency")
+shapiro.test(data_A$cortisol_serum)
+shapiro.test(data_A$cortisol_saliva)
+```
+
+```{r}
+model_A <- lmer(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum + (1 | hospital), data = data_A)
+summary(model_A)
+```
+
+```{r}
+# Coefficients
+coef(summary(model_A))
+
+# Confidence intervals
+confint(model_A)
+```
+
+```{r}
+# The variance explained by the fixed effects (marginal R²) and by both fixed and random effects (conditional R²):
+r2_values <- r2(model_A)
+r2_marginal <- r2_values$R2_marginal
+r2_conditional <- r2_values$R2_conditional
+
+cat("Marginal R²: ", r2_marginal, "\n")
+cat("Conditional R²: ", r2_conditional, "\n")
+```
+
+
+## Compute the variance explained by the model on datafile B
+
+```{r}
+# Model prediction on dataset B
+predictions_B <- predict(model_A, newdata = data_B, re.form = NA)
+data_B <- data_B %>% mutate(predicted_pain = predictions_B)
+```
+
+```{r}
+# Calculate RSS and TSS
+RSS <- sum((data_B$pain - data_B$predicted_pain)^2)
+TSS <- sum((data_B$pain - mean(data_B$pain))^2)
+
+# Compute R² for Dataset B
+R2_B <- 1 - (RSS / TSS)
+cat("R² for Dataset B: ", R2_B, "\n")
 
 ```
 
+
+# Report
+
+We conducted a linear mixed-effects model fitted to the A data set. Next we used this model to predict pain in B data set. As predictors we used age, sex, pain catastrophizing, mindfulness and cortisol level, with a random intercept for hospitals. The fixed effects explain 31,68% of variance, and the fixed and random effects explain 43,56%. 
+The model used on the B data set explains about 34,98% of the variance.
+
+```{r}
+# R² Values
+r2_values <- data.frame(
+  Measure = c("Marginal R² (Dataset A)", "Conditional R² (Dataset A)", "R² (Dataset B)"),
+  Value = c(0.3167528, 0.4356176, 0.3497686)
+)
+
+# Print the table
+kable(r2_values, format = "html", col.names = c("Measure", "R²")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+
+# Discussion
+
+The predictors only have a moderate ability to explain variance in experienced pain. Furthermore the variability in hospitals also has an effect on the  experienced pain, so it would be important to explore differences in hospitals that can have an effect on pain management.
