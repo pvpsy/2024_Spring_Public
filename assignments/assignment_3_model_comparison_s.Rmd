@@ -119,7 +119,7 @@ In order to test the more complex model for outliers and to test the assumptions
 ```{r}
 shapiro.test(data$STAI_trait)
 shapiro.test(data$pain_cat)
-hist(data$pain_cat, main = "Histogram of Variable", xlab = "Variable", ylab = "Frequency")
+hist(data$pain_cat, main = "Histogram of Pain catastrophizing", xlab = "pain_cat", ylab = "Frequency")
 shapiro.test(data$mindfulness)
 shapiro.test(data$cortisol_serum)
 shapiro.test(data$cortisol_saliva)
@@ -184,7 +184,7 @@ vif(complex_model)
 If based on the assumption tests you decide to drop a predictor variable you should do that here. Create your updated model.
 
 ```{r}
-updated_model <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness, data = data)
+updated_model <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum, data = data)
 summary(updated_model)
 ```
 
@@ -322,14 +322,14 @@ A multiple regression analysis was conducted to examine the predictors of pain. 
 tab_model(simple_model, show.se = TRUE, show.stat = TRUE, show.aic = TRUE)
 ```
 
-Furthermore the regression equation of the more complex model was the following: pain = 4.685 − 0.067 * age - 0.221 * sex + 0.027 * STAI_trait + 0.096 * pain_cat − 0.198 * mindfulness. The regression model was statistically significant, F(5, 152) = 10.41, p < .001, and explained 25.6% of the variance in pain scores (R² = .256, Adjusted R² = .231). The residual standard error was 1.325.
-Age (B = -0.067, SE = 0.024, t(152) = -2.85, p = .005) and pain catastrophizing (B = 0.096, SE = 0.030, t(152) = 3.19, p = .002) catastrophizing were significant predictors of pain.
+Furthermore the regression equation of the more complex model was the following: pain = 2.576 − 0.034 * age - 0.316 * sex - 0.013 * STAI_trait + 0.083 * pain_cat − 0.136 * mindfulness + 0.543 * cortisol_serum. The regression model was statistically significant, F(6, 151) = 12.85, p < .001, and explained 33.8% of the variance in pain scores (R² = .338, Adjusted R² = .312). The residual standard error was 1.253.
+Pain catastrophizing (B = 0.083, SE = 0.028, t(151) = 2.926, p = .004) and the cortisol level in blood (B = 0.543, SE = 0.125, t(151) = 4.351, p < .001) were significant predictors of pain.
 
 ```{r}
 tab_model(updated_model, show.se = TRUE, show.stat = TRUE, show.aic = TRUE)
 ```
 
-The complex model explained significantly more (17.5 %) variability than the simple model.
+The complex model explained significantly more (25.8 %) variability than the simple model.
 
 ```{r}
 # Create a data frame for the adjusted R-squared values
@@ -344,6 +344,5 @@ kable(adjr2_comparison, caption = "Comparison of Adjusted R-squared Values") %>%
 
 # Discussion
 
-In our study we found that age and pain catastrophizing were significant predictors of pain. Additionally we found that higher pain catastrophizing are associated with higher pain scores.
-The conclusion is that the older a person is the lower the pain experienced which confirms previous findings. 
+In our study we found that pain catastrophizing and the cortisol level in the bloodstream  were significant predictors of pain. The conclusion is that the higher the cortisol level in the bloodstream the higher the pain experienced around and after surgeries by the person. We also found, that the pain catastrophizing questionnaire is a reliable indication of the experienced pain.
 
